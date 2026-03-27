@@ -1,12 +1,11 @@
 // app/api/index/route.ts
-import { vizBaseUrl } from "../../../lib/visualizer.ts";
+import { vizHeaders } from "../../../lib/visualizer";
 
 export const dynamic = "force-dynamic";
 
-// In-memory cache — persists between requests on same Vercel instance
 let cachedShots: any[] = [];
 let lastBuilt = 0;
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 60 * 60 * 1000;
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -19,11 +18,11 @@ export async function GET(request: Request) {
     return Response.json({ shots: cachedShots, total: cachedShots.length, cached: true });
   }
 
-  const base = vizBaseUrl();
+  const headers = vizHeaders(); // ← declared once, at the top
+
   console.log("Building index...");
 
-  // Step 1: Fetch first 2 pages of IDs (200 newest shots)
-  const page1 = await fetch(`${base}/shots?limit=100&page=1`)
+  const page1 = await fetch("https://visualizer.coffee/api/shots?limit=100&page=1", { headers })
     .then((r) => r.json())
     .catch(() => ({ data: [] }));
 
@@ -31,7 +30,7 @@ export async function GET(request: Request) {
 
   await wait(1500);
 
-  const page2 = await fetch(`${base}/shots?limit=100&page=2`)
+  const page2 = await fetch("https://visualizer.coffee/api/shots?limit=100&page=2", { headers })
     .then((r) => r.json())
     .catch(() => ({ data: [] }));
 
@@ -44,13 +43,12 @@ export async function GET(request: Request) {
 
   console.log(`Total IDs: ${allIds.length}`);
 
-  // Step 2: Fetch full shot details one by one
   const shots: any[] = [];
 
   for (let i = 0; i < allIds.length; i++) {
     await wait(1300);
 
-    const shot = await fetch(`${base}/shots/${allIds[i]}`)
+    const shot = await fetch(`https://visualizer.coffee/api/shots/${allIds[i]}`, { headers })
       .then((r) => r.json())
       .catch(() => null);
 
