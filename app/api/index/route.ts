@@ -1,54 +1,105 @@
 // app/api/index/route.ts
 import { vizHeaders } from "../../../lib/visualizer";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
-let cachedShots: any[] = [];
-let lastBuilt = 0;
-const CACHE_TTL = 60 * 60 * 1000;
-
+const CACHE_FILE = path.join(process.cwd(), ".cache", "shots.json");
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function readCache(): { shots: any[]; builtAt: number } | null {
+  try {
+    if (!fs.existsSync(CACHE_FILE)) return null;
+    const data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+    if (Date.now() - data.builtAt > CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(shots: any[]) {
+  const dir = path.dirname(CACHE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(CACHE_FILE, JSON.stringify({ shots, builtAt: Date.now() }), "utf-8");
+}
+
+function readPartial(): { shots: any[]; completedIds: string[] } {
+  try {
+    const file = path.join(process.cwd(), ".cache", "partial.json");
+    if (!fs.existsSync(file)) return { shots: [], completedIds: [] };
+    return JSON.parse(fs.readFileSync(file, "utf-8"));
+  } catch {
+    return { shots: [], completedIds: [] };
+  }
+}
+
+function writePartial(shots: any[], completedIds: string[]) {
+  const file = path.join(process.cwd(), ".cache", "partial.json");
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ shots, completedIds }), "utf-8");
+}
+
+function clearPartial() {
+  const file = path.join(process.cwd(), ".cache", "partial.json");
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forceRebuild = searchParams.get("rebuild") === "true";
 
-  if (!forceRebuild && cachedShots.length > 0 && Date.now() - lastBuilt < CACHE_TTL) {
-    console.log(`Serving ${cachedShots.length} cached shots`);
-    return Response.json({ shots: cachedShots, total: cachedShots.length, cached: true });
+  // Serve from cache if available
+  if (!forceRebuild) {
+    const cached = readCache();
+    if (cached) {
+      console.log(`Serving ${cached.shots.length} cached shots from disk`);
+      return Response.json({ shots: cached.shots, total: cached.shots.length, cached: true });
+    }
   }
 
-  const headers = vizHeaders(); // ← declared once, at the top
-
+  const headers = vizHeaders();
   console.log("Building index...");
 
-  const page1 = await fetch("https://visualizer.coffee/api/shots?limit=100&page=1", { headers })
+  // Step 1: Collect ALL IDs across all pages
+  const firstPage = await fetch("https://visualizer.coffee/api/shots?limit=100&page=1", { headers })
     .then((r) => r.json())
-    .catch(() => ({ data: [] }));
+    .catch(() => ({ data: [], paging: {} }));
 
-  console.log(`Page 1: ${page1.data?.length ?? 0} IDs, total pages: ${page1.paging?.pages}`);
+  const totalPages: number = firstPage.paging?.pages ?? 1;
+  const allIds: string[] = (firstPage.data ?? []).map((s: any) => s.id);
+  console.log(`Total pages: ${totalPages}, first page IDs: ${allIds.length}`);
 
-  await wait(1500);
+  for (let i = 2; i <= totalPages; i++) {
+    await wait(1300);
+    const result = await fetch(`https://visualizer.coffee/api/shots?limit=100&page=${i}`, { headers })
+      .then((r) => r.json())
+      .catch(() => ({ data: [] }));
+    if (result.error) {
+      console.log(`Page ${i} error: ${result.error}`);
+      continue;
+    }
+    allIds.push(...(result.data ?? []).map((s: any) => s.id));
+    console.log(`Page ${i}/${totalPages} — IDs: ${allIds.length}`);
+  }
 
-  const page2 = await fetch("https://visualizer.coffee/api/shots?limit=100&page=2", { headers })
-    .then((r) => r.json())
-    .catch(() => ({ data: [] }));
+  console.log(`Total IDs collected: ${allIds.length}`);
 
-  console.log(`Page 2: ${page2.data?.length ?? 0} IDs`);
+  // Step 2: Resume from partial if available
+  const partial = readPartial();
+  const remainingIds = allIds.filter((id) => !partial.completedIds.includes(id));
+  const shots: any[] = [...partial.shots];
+  const completedIds: string[] = [...partial.completedIds];
 
-  const allIds: string[] = [
-    ...(page1.data ?? []).map((s: any) => s.id),
-    ...(page2.data ?? []).map((s: any) => s.id),
-  ];
+  console.log(`Already fetched: ${shots.length}, remaining: ${remainingIds.length}`);
 
-  console.log(`Total IDs: ${allIds.length}`);
-
-  const shots: any[] = [];
-
-  for (let i = 0; i < allIds.length; i++) {
+  for (let i = 0; i < remainingIds.length; i++) {
     await wait(1300);
 
-    const shot = await fetch(`https://visualizer.coffee/api/shots/${allIds[i]}`, { headers })
+    const shot = await fetch(`https://visualizer.coffee/api/shots/${remainingIds[i]}`, { headers })
       .then((r) => r.json())
       .catch(() => null);
 
@@ -57,12 +108,19 @@ export async function GET(request: Request) {
       continue;
     }
 
-    console.log(`[${i + 1}/${allIds.length}] user: ${shot.user_id} bean: ${shot.bean_type}`);
     shots.push(shot);
+    completedIds.push(remainingIds[i]);
+
+    // Save progress every 50 shots so we can resume if interrupted
+    if (i % 50 === 0) {
+      writePartial(shots, completedIds);
+      console.log(`Progress: ${shots.length} / ${allIds.length}`);
+    }
   }
 
-  cachedShots = shots;
-  lastBuilt = Date.now();
+  // Save final cache and clear partial
+  writeCache(shots);
+  clearPartial();
 
   console.log(`Done! ${shots.length} shots`);
   return Response.json({ shots, total: shots.length, cached: false });
