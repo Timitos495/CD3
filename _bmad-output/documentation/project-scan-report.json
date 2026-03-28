@@ -1,0 +1,79 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-03-28T16:04:39.544837",
+    "last_updated": "2026-03-28T16:04:39.586817"
+  },
+  "mode": "initial_scan",
+  "scan_level": "quick",
+  "project_root": "c:\\Users\\tim.van.den.berg\\coffeedashboard\\CD3",
+  "project_knowledge": "c:\\Users\\tim.van.den.berg\\coffeedashboard\\CD3\\docs",
+  "completed_steps": [
+    {
+      "step": "all_steps",
+      "status": "completed",
+      "timestamp": "2026-03-28T16:04:39.586802",
+      "summary": "Documentation generation complete. Generated 7 files."
+    }
+  ],
+  "current_step": "step_complete",
+  "findings": {
+    "project_classification": {
+      "repository_type": "monolith",
+      "project_type_id": "web",
+      "project_type_display": "Next.js Web Application",
+      "primary_language": "TypeScript",
+      "framework": "Next.js 13+",
+      "key_indicators": {
+        "has_next_config": true,
+        "has_app_dir": true,
+        "has_tsconfig": true,
+        "has_package_json": true
+      }
+    },
+    "existing_docs": [
+      {
+        "type": "readme",
+        "path": "./README.md",
+        "title": "README"
+      }
+    ],
+    "tech_stack": {
+      "language": "TypeScript",
+      "framework": "Next.js 13+ (App Router)",
+      "styling": "Tailwind CSS",
+      "package_manager": "npm",
+      "build_system": "Next.js",
+      "testing": "TBD",
+      "database": "TBD",
+      "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+      },
+      "key_dependencies": [
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "autoprefixer",
+        "eslint",
+        "eslint-config-next",
+        "next",
+        "postcss",
+        "react",
+        "react-dom"
+      ]
+    }
+  },
+  "outputs_generated": [
+    "project_overview",
+    "architecture",
+    "source_tree",
+    "development_guide",
+    "api_contracts",
+    "deployment_guide",
+    "index"
+  ],
+  "resume_instructions": "Starting from step 1"
+}
