@@ -1,5 +1,5 @@
 // app/api/shot/route.ts
-import { vizBaseUrl } from "../../../lib/visualizer.ts";
+import { vizBaseUrl } from "../../../lib/visualizer";
 
 export const dynamic = "force-dynamic";
 

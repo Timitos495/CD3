@@ -1,6 +1,6 @@
 // app/page.tsx
-import ShotDashboard from "./ShotDashboard";
+import DashboardWithTabs from "./DashboardWithTabs";
 
 export default function Page() {
-  return <ShotDashboard />;
+  return <DashboardWithTabs />;
 }
