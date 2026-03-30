@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { RawShot } from './types';
 import { transformShots } from './utils';
+import { filterShotsByPeriod } from './utils';
 import { useRoasterAnalytics, useProfileAnalytics, useCaffeineAnalytics } from './hooks/useAnalytics';
 import { RoasterMixCard } from './RoasterMixCard';
 import { ProfileMixCard } from './ProfileMixCard';
@@ -16,9 +17,12 @@ interface InsightsTabProps {
 export function InsightsTab({ rawShots }: InsightsTabProps) {
   const shots = transformShots(rawShots);
 
-  const { roasters } = useRoasterAnalytics(shots);
-  const { profiles } = useProfileAnalytics(shots);
-  const { dailyData } = useCaffeineAnalytics(shots);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('7d');
+  const filteredShots = filterShotsByPeriod(shots, selectedPeriod);
+
+  const { roasters } = useRoasterAnalytics(filteredShots);
+  const { profiles } = useProfileAnalytics(filteredShots);
+  const { dailyData } = useCaffeineAnalytics(filteredShots);
 
   const [selectedRoasterId, setSelectedRoasterId] = useState<string | undefined>();
   const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>();
@@ -27,12 +31,12 @@ export function InsightsTab({ rawShots }: InsightsTabProps) {
   // Get detail data
   const selectedRoaster = roasters.find((r) => r.id === selectedRoasterId);
   const selectedRoasterShots = selectedRoasterId
-    ? shots.filter((s) => s.roasterId === selectedRoasterId)
+    ? filteredShots.filter((s) => s.roasterId === selectedRoasterId)
     : [];
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId);
   const selectedProfileShots = selectedProfileId
-    ? shots.filter((s) => s.profileId === selectedProfileId)
+    ? filteredShots.filter((s) => s.profileId === selectedProfileId)
     : [];
 
   const selectedDayData = selectedDate
@@ -42,6 +46,31 @@ export function InsightsTab({ rawShots }: InsightsTabProps) {
   return (
     <div className="w-full bg-slate-50 min-h-screen p-6">
       <h2 className="text-2xl font-bold mb-6 text-slate-900">Insights</h2>
+
+      {/* Time Period Selector */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: '7d', label: '7 days' },
+            { key: '1m', label: '1 month' },
+            { key: '3m', label: '3 months' },
+            { key: '6m', label: '6 months' },
+            { key: 'all', label: 'all time' },
+          ].map((period) => (
+            <button
+              key={period.key}
+              onClick={() => setSelectedPeriod(period.key)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedPeriod === period.key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {period.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Cards Grid - Responsive */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -98,7 +127,7 @@ export function InsightsTab({ rawShots }: InsightsTabProps) {
       )}
 
       {/* If no data, show empty state */}
-      {shots.length === 0 && (
+      {filteredShots.length === 0 && (
         <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
           <p className="text-slate-400 text-lg">
             No shots recorded yet. Start logging to see your analytics!

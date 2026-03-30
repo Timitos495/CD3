@@ -4,6 +4,7 @@ import {
   estimateCaffeine,
   transformShot,
   getLastSevenDays,
+  filterShotsByPeriod,
   isSameDay,
 } from './utils';
 import { RawShot } from './types';
@@ -146,6 +147,83 @@ describe('utils', () => {
       const result = getLastSevenDays(shots);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('1');
+    });
+  });
+
+  describe('filterShotsByPeriod', () => {
+    const today = new Date();
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const eightDaysAgo = new Date(today.getTime() - 8 * 24 * 60 * 60 * 1000);
+    const thirtyOneDaysAgo = new Date(today.getTime() - 31 * 24 * 60 * 60 * 1000);
+
+    const shots = [
+      {
+        id: '1',
+        timestamp: today,
+        roasterId: 'r1',
+        roasterName: 'R1',
+        profileId: 'p1',
+        profileName: 'P1',
+        estimatedCaffeine: 70,
+        originalProfile: 'Espresso',
+      },
+      {
+        id: '2',
+        timestamp: yesterday,
+        roasterId: 'r2',
+        roasterName: 'R2',
+        profileId: 'p2',
+        profileName: 'P2',
+        estimatedCaffeine: 70,
+        originalProfile: 'Espresso',
+      },
+      {
+        id: '3',
+        timestamp: eightDaysAgo,
+        roasterId: 'r3',
+        roasterName: 'R3',
+        profileId: 'p3',
+        profileName: 'P3',
+        estimatedCaffeine: 70,
+        originalProfile: 'Espresso',
+      },
+      {
+        id: '4',
+        timestamp: thirtyOneDaysAgo,
+        roasterId: 'r4',
+        roasterName: 'R4',
+        profileId: 'p4',
+        profileName: 'P4',
+        estimatedCaffeine: 70,
+        originalProfile: 'Espresso',
+      },
+    ];
+
+    it('should return all shots for "all" period', () => {
+      const result = filterShotsByPeriod(shots, 'all');
+      expect(result).toHaveLength(4);
+    });
+
+    it('should filter to 7 days for "7d"', () => {
+      const result = filterShotsByPeriod(shots, '7d');
+      expect(result).toHaveLength(2); // today, yesterday (8 days ago is outside 7 days)
+      expect(result.map(s => s.id)).toEqual(['1', '2']);
+    });
+
+    it('should filter to 30 days for "1m"', () => {
+      const result = filterShotsByPeriod(shots, '1m');
+      expect(result).toHaveLength(3); // excludes 31 days ago
+      expect(result.map(s => s.id)).toEqual(['1', '2', '3']);
+    });
+
+    it('should filter to 90 days for "3m"', () => {
+      const result = filterShotsByPeriod(shots, '3m');
+      expect(result).toHaveLength(4); // all within 90 days
+    });
+
+    it('should filter to 180 days for "6m"', () => {
+      const result = filterShotsByPeriod(shots, '6m');
+      expect(result).toHaveLength(4); // all within 180 days
     });
   });
 });

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { ShotRecord, RoasterData, ProfileData, DailyShots } from '../types';
-import { getLastSevenDays, isSameDay, getDayName } from '../utils';
+import { isSameDay, getDayName } from '../utils';
 
 /**
  * Hook: useRoasterAnalytics
@@ -10,7 +10,7 @@ import { getLastSevenDays, isSameDay, getDayName } from '../utils';
  */
 export function useRoasterAnalytics(shots: ShotRecord[]) {
   return useMemo(() => {
-    const filtered = getLastSevenDays(shots);
+    const filtered = shots;
     if (filtered.length === 0) {
       return { roasters: [], totalShots: 0, weekTotal: 0 };
     }
@@ -59,7 +59,7 @@ export function useRoasterAnalytics(shots: ShotRecord[]) {
  */
 export function useProfileAnalytics(shots: ShotRecord[]) {
   return useMemo(() => {
-    const filtered = getLastSevenDays(shots);
+    const filtered = shots;
     if (filtered.length === 0) {
       return { profiles: [], totalShots: 0, weekTotal: 0 };
     }
@@ -108,7 +108,7 @@ export function useProfileAnalytics(shots: ShotRecord[]) {
  */
 export function useCaffeineAnalytics(shots: ShotRecord[]) {
   return useMemo(() => {
-    const filtered = getLastSevenDays(shots);
+    const filtered = shots;
 
     if (filtered.length === 0) {
       return {
@@ -129,14 +129,17 @@ export function useCaffeineAnalytics(shots: ShotRecord[]) {
       dayMap.set(dayKey, existing);
     });
 
-    // Create 7-day rolling window (today - 6 days through today)
-    const today = new Date();
-    const sevenDaysAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-    const dailyData: DailyShots[] = [];
+    // Find date range
+    const dates = filtered.map(s => s.timestamp);
+    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
 
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(sevenDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayKey = date.toISOString().split('T')[0];
+    // Create daily data for the entire range
+    const dailyData: DailyShots[] = [];
+    const currentDate = new Date(minDate);
+
+    while (currentDate <= maxDate) {
+      const dayKey = currentDate.toISOString().split('T')[0];
       const dayShotsRaw = dayMap.get(dayKey) || [];
 
       const totalCaffeine = dayShotsRaw.reduce(
@@ -145,11 +148,13 @@ export function useCaffeineAnalytics(shots: ShotRecord[]) {
       );
 
       dailyData.push({
-        date,
+        date: new Date(currentDate),
         shotCount: dayShotsRaw.length,
         totalCaffeine,
         shots: dayShotsRaw,
       });
+
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     // Calculate stats
@@ -157,7 +162,7 @@ export function useCaffeineAnalytics(shots: ShotRecord[]) {
       (sum, shot) => sum + shot.estimatedCaffeine,
       0
     );
-    const avgDaily = filtered.length > 0 ? weekTotal / 7 : 0;
+    const avgDaily = dailyData.length > 0 ? weekTotal / dailyData.length : 0;
 
     // Find peak day
     let peakDay = null;

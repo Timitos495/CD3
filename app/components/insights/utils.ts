@@ -94,6 +94,41 @@ export function getLastSevenDays(shots: ShotRecord[]): ShotRecord[] {
 }
 
 /**
+ * Filter shots by time period
+ */
+export function filterShotsByPeriod(shots: ShotRecord[], period: string): ShotRecord[] {
+  if (period === 'all') {
+    return shots;
+  }
+
+  const today = new Date();
+  let daysBack: number;
+
+  switch (period) {
+    case '7d':
+      daysBack = 7;
+      break;
+    case '1m':
+      daysBack = 30;
+      break;
+    case '3m':
+      daysBack = 90;
+      break;
+    case '6m':
+      daysBack = 180;
+      break;
+    default:
+      daysBack = 7;
+  }
+
+  const cutoffDate = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000);
+
+  return shots.filter(
+    (shot) => shot.timestamp >= cutoffDate && shot.timestamp <= today
+  );
+}
+
+/**
  * Check if two dates are the same day
  */
 export function isSameDay(date1: Date, date2: Date): boolean {

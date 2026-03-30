@@ -85,9 +85,9 @@ describe('useAnalytics hooks', () => {
   });
 
   describe('useCaffeineAnalytics', () => {
-    it('should create daily breakdown for past 7 days', () => {
+    it('should create daily breakdown for the period', () => {
       const { result } = renderHook(() => useCaffeineAnalytics(mockShots));
-      expect(result.current.dailyData).toHaveLength(7);
+      expect(result.current.dailyData).toHaveLength(1); // All shots on same day
     });
 
     it('should calculate total caffeine correctly', () => {
@@ -100,7 +100,7 @@ describe('useAnalytics hooks', () => {
     it('should calculate average daily caffeine', () => {
       const { result } = renderHook(() => useCaffeineAnalytics(mockShots));
       // All shots are on same day, so avg = total caffeine / 1 day
-      const expectedAvg = (70 + 84 + 70) / 7; // 7 days in week but only 1 has data
+      const expectedAvg = (70 + 84 + 70) / 1; // 1 day with data
 
       expect(result.current.avgDaily).toBeCloseTo(expectedAvg, 1);
     });
