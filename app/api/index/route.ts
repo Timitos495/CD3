@@ -57,46 +57,32 @@ export async function GET(request: Request) {
     const cached = readCache();
     if (cached) {
       console.log(`Serving ${cached.shots.length} cached shots from disk`);
-      return Response.json({ shots: cached.shots, total: cached.shots.length, cached: true });
+      // Limit to 100 shots for now
+      const limitedShots = cached.shots.slice(0, 100);
+      return Response.json({ shots: limitedShots, total: cached.shots.length, cached: true, limited: true });
     }
   }
 
   const headers = vizHeaders();
-  console.log("Building index...");
+  console.log("Building index with 100 shot limit...");
 
-  // Step 1: Collect ALL IDs across all pages
-  const firstPage = await fetch("https://visualizer.coffee/api/shots?limit=100&page=1", { headers })
+  // Step 1: Collect first 100 IDs only (items param per Visualizer API docs)
+  const firstPage = await fetch("https://visualizer.coffee/api/shots?items=100&page=1", { headers })
     .then((r) => r.json())
     .catch(() => ({ data: [], paging: {} }));
 
-  const totalPages: number = firstPage.paging?.pages ?? 1;
-  const allIds: string[] = (firstPage.data ?? []).map((s: any) => s.id);
-  console.log(`Total pages: ${totalPages}, first page IDs: ${allIds.length}`);
+  const allIds: string[] = (firstPage.data ?? []).slice(0, 100).map((s: any) => s.id); // Limit to 100 IDs
+  console.log(`Limited to first 100 IDs: ${allIds.length}`);
 
-  for (let i = 2; i <= totalPages; i++) {
-    await wait(1300);
-    const result = await fetch(`https://visualizer.coffee/api/shots?limit=100&page=${i}`, { headers })
-      .then((r) => r.json())
-      .catch(() => ({ data: [] }));
-    if (result.error) {
-      console.log(`Page ${i} error: ${result.error}`);
-      continue;
-    }
-    allIds.push(...(result.data ?? []).map((s: any) => s.id));
-    console.log(`Page ${i}/${totalPages} — IDs: ${allIds.length}`);
-  }
-
-  console.log(`Total IDs collected: ${allIds.length}`);
-
-  // Step 2: Resume from partial if available
+  // Step 2: Resume from partial if available (but limit to 100 total)
   const partial = readPartial();
-  const remainingIds = allIds.filter((id) => !partial.completedIds.includes(id));
-  const shots: any[] = [...partial.shots];
+  const remainingIds = allIds.filter((id) => !partial.completedIds.includes(id)).slice(0, 100 - partial.shots.length);
+  const shots: any[] = [...partial.shots].slice(0, 100); // Limit existing shots
   const completedIds: string[] = [...partial.completedIds];
 
-  console.log(`Already fetched: ${shots.length}, remaining: ${remainingIds.length}`);
+  console.log(`Already fetched: ${shots.length}, remaining: ${remainingIds.length} (limited to 100 total)`);
 
-  for (let i = 0; i < remainingIds.length; i++) {
+  for (let i = 0; i < remainingIds.length && shots.length < 100; i++) {
     await wait(1300);
 
     const shot = await fetch(`https://visualizer.coffee/api/shots/${remainingIds[i]}`, { headers })
@@ -118,10 +104,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // Save final cache and clear partial
-  writeCache(shots);
+  // Save final cache (limited to 100) and clear partial
+  const limitedShots = shots.slice(0, 100);
+  writeCache(limitedShots);
   clearPartial();
 
-  console.log(`Done! ${shots.length} shots`);
-  return Response.json({ shots, total: shots.length, cached: false });
+  console.log(`Done! Limited to ${limitedShots.length} shots (first 100)`);
+  return Response.json({ shots: limitedShots, total: limitedShots.length, cached: false, limited: true });
 }
