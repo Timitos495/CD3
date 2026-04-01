@@ -79,10 +79,10 @@ function MiniSparkline({ shot }: { shot: ShotIndex }) {
         <path d={toPath(weight, weightMax)} fill="none" stroke="#f59e0b" strokeWidth="0.5" opacity="0.8" />
       )}
       {flow.length > 0 && (
-        <path d={toPath(flow, flowMax)} fill="none" stroke="#10b981" strokeWidth="0.6" />
+        <path d={toPath(flow, flowMax)} fill="none" stroke="#3b82f6" strokeWidth="0.6" />
       )}
       {pressure.length > 0 && (
-        <path d={toPath(pressure, pressureMax)} fill="none" stroke="#3b82f6" strokeWidth="0.6" />
+        <path d={toPath(pressure, pressureMax)} fill="none" stroke="#10b981" strokeWidth="0.6" />
       )}
     </svg>
   );
@@ -122,10 +122,10 @@ function DetailGraph({ shot }: { shot: ShotDetail }) {
   return (
     <div className="bg-slate-50 rounded border border-slate-100 p-3">
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-bold mb-2">
-        <span className="text-blue-500">— Pressure</span>
-        <span className="text-blue-300">-- Goal</span>
-        <span className="text-emerald-500">— Flow</span>
+        <span className="text-emerald-500">— Pressure</span>
         <span className="text-emerald-300">-- Goal</span>
+        <span className="text-blue-500">— Flow</span>
+        <span className="text-blue-300">-- Goal</span>
         {weight.length > 0 && <span className="text-amber-500">— Weight</span>}
       </div>
       <svg viewBox="0 0 200 60" className="w-full" preserveAspectRatio="none" style={{ height: "140px" }}>
@@ -133,10 +133,10 @@ function DetailGraph({ shot }: { shot: ShotDetail }) {
           <line key={t} x1="0" y1={60 - t * 58} x2="200" y2={60 - t * 58}
             stroke="#e2e8f0" strokeWidth="0.5" />
         ))}
-        {pressureGoal.length > 0 && <path d={toPath(pressureGoal, 60, pressureMax)} fill="none" stroke="#93c5fd" strokeWidth="0.8" strokeDasharray="2,2" />}
-        {pressure.length > 0     && <path d={toPath(pressure,     60, pressureMax)} fill="none" stroke="#3b82f6" strokeWidth="1.2" />}
-        {flowGoal.length > 0     && <path d={toPath(flowGoal,     60, flowMax)}     fill="none" stroke="#6ee7b7" strokeWidth="0.8" strokeDasharray="2,2" />}
-        {flow.length > 0         && <path d={toPath(flow,         60, flowMax)}     fill="none" stroke="#10b981" strokeWidth="1.2" />}
+        {pressureGoal.length > 0 && <path d={toPath(pressureGoal, 60, pressureMax)} fill="none" stroke="#6ee7b7" strokeWidth="0.8" strokeDasharray="2,2" />}
+        {pressure.length > 0     && <path d={toPath(pressure,     60, pressureMax)} fill="none" stroke="#10b981" strokeWidth="1.2" />}
+        {flowGoal.length > 0     && <path d={toPath(flowGoal,     60, flowMax)}     fill="none" stroke="#93c5fd" strokeWidth="0.8" strokeDasharray="2,2" />}
+        {flow.length > 0         && <path d={toPath(flow,         60, flowMax)}     fill="none" stroke="#3b82f6" strokeWidth="1.2" />}
         {weight.length > 0       && <path d={toPath(weight,       60, weightMax)}   fill="none" stroke="#f59e0b" strokeWidth="1.2" />}
       </svg>
     </div>
